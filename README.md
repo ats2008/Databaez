@@ -2,4 +2,4 @@
 An SQL database engine.
 
 ### Milestones
-[] Pagination
+[ ] Pagination
