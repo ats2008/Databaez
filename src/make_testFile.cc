@@ -38,6 +38,13 @@ int main(int argc, char** argv)
     int age;
     float taxBase;
     char gender;
+    output_csv<<"#name,age,gender,taxPercentage";
+    for(uint16_t j=0 ; j< N_COLS-5;j++)
+    {
+        output_csv<<","<<"FEATURE_"<<j+5;
+    }
+    output_csv<<"\n";
+
     for(long unsigned int i; i < nLines ; i++)
     {
         auto nameL=rand()%5;
