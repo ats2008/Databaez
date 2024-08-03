@@ -1,16 +1,37 @@
 /**
  * id, first_name, second_name, country, email, fruit
- *
  * first_name x second_name x country x email{first_name.second_name x domain} + fruit
  */
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmdparser.h>
 
-int main() {
-    std::string filename{"data.csv"};
+#define R_SEED  42
+
+void configure_parser(cli::Parser& parser) {
+	parser.set_optional<std::string>("o", "output", "data.csv", "output filename");
+	parser.set_optional<long unsigned int>("n", "nLines", 64, "Number of lines in the csv");
+	parser.set_optional<float>("s", "survival_prob", 0.75, "probability by which an additional feature can get added in the 'extra_feature'  ");
+	parser.set_optional<bool>("l", "doVariableLengthRows", false, "If turned on , will make rows with variable number of integer features appended at the end, based on 'survival_proba' ");
+}
+
+
+int main(int argc, char** argv) {
+
+    cli::Parser parser(argc, argv);    
+    configure_parser(parser);
+    parser.run_and_exit_if_error();
+    
+    auto nLines = parser.get<long unsigned int>("n");
+    auto filename = parser.get<std::string>("o");
+    bool doVariableLengthRows = parser.get<bool>("l");
+    float survival_proba = parser.get<float>("s");
     std::fstream file{filename, file.in | file.out};
+    std::cout<<"Generating "<<filename<<" with "<<nLines<<" rows [ variable length rows : "<<doVariableLengthRows<<" , survival prob : "<<survival_proba<<"] \n";
+    srand(R_SEED);
+
     long count_rw = 1;
     long count_fn = 0;
     long count_sn = 0;
@@ -32,33 +53,56 @@ int main() {
     const long len_sn = second_name.size();
     const long len_cty = country.size();
     const long len_eid = email_domain.size();
-    const long len_ff = fav_fruits.size() - 1;
+    const long len_ff = fav_fruits.size() ;
 
     if (!file.is_open()) {
         std::cout << "failed\n";
         return 0;
     }
 
-    file << "id, " << "first name, " << "second name, " << "country, " << "email, " << "favorite fruit\n";
-    while (count_fn < len_fn) {
-        count_sn = 0;
-        while (count_sn < len_sn) {
-            count_cty = 0;
-            while (count_cty < len_cty) {
-                count_eid = 0;
-                while (count_eid < len_eid) {
-                    file << count_rw << ", " << first_name[count_fn] << ", " << second_name[count_sn] << ", " << country[count_cty] << ", " << (first_name[count_fn] + "." + second_name[count_sn] + email_domain[count_eid]) << ", " << fav_fruits[count_ff] << '\n';
-                    ++count_eid;
-                    ++count_ff;
-                    ++count_rw;
-                    if (count_ff > len_ff)
-                        count_ff = 0;
-                }
-                ++count_cty;
+    file << "id, " << "first name, " << "second name, " <<"age, "<<"gender, "<< "country, " 
+         << "email, " << "favorite fruit, "<<"base tax, "
+         << "extra_feature\n";
+    
+    size_t fn,sn,age;
+    float taxBase;
+    char gender;
+    for(long unsigned int i; i < nLines ; i++)
+    {
+        //auto nameL=rand()%5;
+        //name="";
+        //for(uint8_t j=0;j<5+nameL;j++)
+        //{
+        //    name+=alphabets[rand()%26];
+        //}
+
+        fn = rand()%len_fn;
+        sn = rand()%len_sn;
+        age = 18+rand()%60;
+        taxBase = 8.0+(rand()%120)/4.0;
+        gender = rand()%2 ? 'M' : 'F';
+        
+        file << i 
+             << ", " << first_name[fn] 
+             << ", " << second_name[sn] 
+             << ", " << age
+             << ", " << gender
+             << ", " << country[rand()%len_cty] 
+             << ", " << (first_name[fn] + "." + second_name[sn] + email_domain[rand()%len_eid]) 
+             << ", " << fav_fruits[rand()%len_eid] 
+             << ", " << taxBase
+             << ", " <<rand()%1024;
+        if(doVariableLengthRows)
+        {
+            float x=survival_proba;
+            while( (rand()%1024)/1024.0  < x )
+            {
+                file<< ", " <<rand()%1024;
+                x*=survival_proba;
             }
-            ++count_sn;
         }
-        ++count_fn;
+
+        file << '\n';
     }
 
     file.close();
